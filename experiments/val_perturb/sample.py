@@ -8,6 +8,7 @@ Writes one JSONL line per sample to experiments/val_perturb/runs/<model>.jsonl w
 the reasoning part, extracted answer, correctness and token count. Re-running resumes.
 """
 import argparse, json, pathlib, re, sys
+from collections import Counter
 
 HERE = pathlib.Path(__file__).parent
 DATA = HERE / "data"
@@ -59,12 +60,16 @@ def load_items(args):
                       "question": p["problem"], "expected": answers[p["problem_id"]]})
     review = {(r["problem_id"], r["type"], r["variant_idx"]): r["status"]
               for r in json.loads((DATA / "review.json").read_text())["items"]}
+    taken = Counter()
     if args.variants:
         for line in open(args.variants):
             r = json.loads(line)
             status = review.get((r["problem_id"], r["type"], r["variant_idx"]), "ok")
             if status == "drop" and not args.include_dropped:
                 continue
+            if args.variants_per_type and taken[(r["problem_id"], r["type"])] >= args.variants_per_type:
+                continue
+            taken[(r["problem_id"], r["type"])] += 1
             items.append({**{k: r[k] for k in ("problem_id", "type", "variant_idx", "question")},
                           "source": r.get("generator", "llm"), "flag": status == "flag",
                           "expected": "NaN" if r["type"] == "expert_no_solution" else answers[r["problem_id"]]})
@@ -91,6 +96,10 @@ def main():
     ap.add_argument("--n", type=int, default=10)
     ap.add_argument("--variants", default=str(DATA / "variants.jsonl"))
     ap.add_argument("--seed-variants", action="store_true", help="also run the organiser-stored (decayed) variants")
+    ap.add_argument("--variants-per-type", type=int, default=None,
+                    help="use only the first K accepted generated variants per (problem, type); default all (10)")
+    ap.add_argument("--kv-cache-dtype", default="auto",
+                    help="vLLM kv_cache_dtype; 'fp8' roughly doubles concurrent sequences")
     ap.add_argument("--include-dropped", action="store_true",
                     help="also run variants marked 'drop' in data/review.json (manual review rejects)")
     ap.add_argument("--problems", default=None)
@@ -106,7 +115,6 @@ def main():
     items = load_items(args)
     print(f"{len(items)} prompts x {args.n} samples", file=sys.stderr)
     if args.dry_run:
-        from collections import Counter
         print(Counter(it["type"] for it in items))
         return
 
@@ -124,7 +132,8 @@ def main():
         if not todo:
             continue
         llm = LLM(model=model, tensor_parallel_size=args.tp, gpu_memory_utilization=args.gpu_mem,
-                  max_model_len=args.max_model_len, trust_remote_code=True, enable_prefix_caching=True)
+                  max_model_len=args.max_model_len, trust_remote_code=True, enable_prefix_caching=True,
+                  kv_cache_dtype=args.kv_cache_dtype)
         sp = SamplingParams(n=args.n, temperature=1.0, top_k=40, top_p=0.95, max_tokens=args.max_tokens, seed=0)
         with out.open("a") as f:
             for i in range(0, len(todo), args.batch):

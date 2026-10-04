@@ -32,6 +32,9 @@ python experiments/val_perturb/sample.py --model allenai/Olmo-3-7B-Think --seed-
 python experiments/val_perturb/sample.py --model deepseek-ai/DeepSeek-R1-0528-Qwen3-8B --seed-variants
 #   knobs: --max-tokens 32768 (default; raise to 65536/100000 for the non-Skywork models if you have the time),
 #          --tp N for tensor parallel, --gpu-mem 0.9, --batch 64, --problems a,b --types rephrase,typos for a subset
+#   cost:  DeepSeek-R1-0528-Qwen3-8B averages ~28k tokens/sample (38% hit the 32k cap) and an A100-80GB only fits
+#          ~15-20 such sequences in KV cache (~420 tok/s), i.e. ~5 days per model at 10 variants x 10 samples.
+#          Reduced budget: --variants-per-type 5 --n 5 (328 prompts x 5) and --kv-cache-dtype fp8 (~2x concurrency).
 
 # optional: hidden-state drift (transformers, fits on one GPU)
 python experiments/val_perturb/hidden.py --model Qwen/Qwen3.5-4B      # repeat per model
