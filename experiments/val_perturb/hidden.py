@@ -4,7 +4,7 @@ from the distribution of correct original-problem traces of the same (model, pro
 Usage (GPU): uv run python experiments/val_perturb/hidden.py --model Qwen/Qwen3.5-4B [--layer-frac 0.66] [--max-tokens 8192]
 Reads runs/<model>.jsonl, writes runs/hidden/<model>.jsonl with md_h (prompt+trace) and md_prompt (prompt only).
 """
-import argparse, json, pathlib
+import argparse, json, pathlib, sys
 import numpy as np, torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from sklearn.covariance import LedoitWolf
@@ -38,7 +38,9 @@ def main():
     ap.add_argument("--dtype", default="bfloat16")
     args = ap.parse_args()
     src = RUNS / (args.model.replace("/", "__") + ".jsonl")
-    rows = [json.loads(l) for l in src.open()]
+    sys.path.insert(0, str(HERE))
+    from analyse import load_rows
+    rows = load_rows(RUNS, args.model)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     tok = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=getattr(torch, args.dtype),

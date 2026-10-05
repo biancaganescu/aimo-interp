@@ -12,14 +12,34 @@ HERE = pathlib.Path(__file__).parent
 ROBUST_MAX, NONROBUST_MIN = 0.10, 0.25
 
 
+def iter_run_files(runs, model=None):
+    """runs/<model>.jsonl plus split+gzipped parts runs/<model>.partNN.gz (GitHub's 100 MB limit)."""
+    stem = model.replace("/", "__") if model else "*"
+    return sorted(runs.glob(f"{stem}.jsonl")) + sorted(runs.glob(f"{stem}.part*.gz")) + sorted(runs.glob(f"{stem}.part*"))
+
+
+def load_rows(runs, model=None):
+    import gzip
+    seen, rows = set(), []
+    for f in iter_run_files(runs, model):
+        if f.suffix == ".gz" or f.suffix == ".jsonl" or ".part" in f.name:
+            opener = gzip.open if f.suffix == ".gz" else open
+            with opener(f, "rt") as fh:
+                for line in fh:
+                    r = json.loads(line)
+                    key = (r["model"], r["id"], r["sample_idx"])
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    rows.append(r)
+    return rows
+
+
 def load_runs(runs):
-    rows = []
-    for f in sorted(runs.glob("*.jsonl")):
-        for line in f.open():
-            r = json.loads(line)
-            r["len_chars"] = len(r["response"])
-            r["truncated"] = r["finish_reason"] == "length"
-            rows.append(r)
+    rows = load_rows(runs)
+    for r in rows:
+        r["len_chars"] = len(r["response"])
+        r["truncated"] = r["finish_reason"] == "length"
     return pd.DataFrame(rows)
 
 
