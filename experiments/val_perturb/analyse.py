@@ -9,6 +9,10 @@ from collections import Counter
 import numpy as np, pandas as pd
 
 HERE = pathlib.Path(__file__).parent
+import sys
+sys.path.insert(0, str(HERE))
+from sample import fix_bytelevel, split_reasoning, extract_answer, is_correct
+
 ROBUST_MAX, NONROBUST_MIN = 0.10, 0.25
 
 
@@ -38,6 +42,12 @@ def load_rows(runs, model=None):
 def load_runs(runs):
     rows = load_rows(runs)
     for r in rows:
+        # runs written before the byte-level fix in sample.py: re-decode and re-extract the answer
+        r["response"] = fix_bytelevel(r.get("response") or "")
+        reasoning, r["final"] = split_reasoning(r["response"])
+        r["reasoning"] = reasoning or ""
+        r["answer"] = extract_answer(r["final"], r["response"])
+        r["correct"] = is_correct(r["answer"], r["expected"])
         r["len_chars"] = len(r["response"])
         r["truncated"] = r["finish_reason"] == "length"
     return pd.DataFrame(rows)

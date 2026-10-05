@@ -22,6 +22,36 @@ MODELS = ["Qwen/Qwen3.5-4B", "Skywork/Skywork-OR1-Math-7B", "allenai/Olmo-3-7B-T
           "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"]
 
 
+def _byte_decoder():
+    bs = list(range(ord("!"), ord("~") + 1)) + list(range(ord("\xa1"), ord("\xac") + 1)) + list(range(ord("\xae"), ord("\xff") + 1))
+    cs = bs[:]
+    n = 0
+    for b in range(256):
+        if b not in bs:
+            bs.append(b)
+            cs.append(256 + n)
+            n += 1
+    return {chr(c): b for c, b in zip(cs, bs)}
+
+
+BYTE_DECODER = _byte_decoder()
+
+
+def fix_bytelevel(text):
+    """Some vLLM/transformers combinations return the raw byte-level BPE surface forms ('Ġ' for space,
+    'Ċ' for newline) instead of decoded text. Map them back through the GPT-2 byte table."""
+    if "Ġ" not in text and "Ċ" not in text:
+        return text
+    out = bytearray()
+    for ch in text:
+        b = BYTE_DECODER.get(ch)
+        if b is None:
+            out += ch.encode("utf-8")
+        else:
+            out.append(b)
+    return out.decode("utf-8", errors="replace")
+
+
 def split_reasoning(text):
     if "</think>" in text:
         think, _, final = text.partition("</think>")
@@ -143,9 +173,10 @@ def main():
                 results = llm.chat(convs, sp, use_tqdm=True)
                 for it, res in zip(chunk, results):
                     for k, o in enumerate(res.outputs):
-                        reasoning, final = split_reasoning(o.text)
-                        ans = extract_answer(final, o.text)
-                        f.write(json.dumps({**it, "model": model, "sample_idx": k, "response": o.text,
+                        text = fix_bytelevel(o.text)
+                        reasoning, final = split_reasoning(text)
+                        ans = extract_answer(final, text)
+                        f.write(json.dumps({**it, "model": model, "sample_idx": k, "response": text,
                                             "reasoning": reasoning, "final": final, "answer": ans,
                                             "correct": is_correct(ans, it["expected"]),
                                             "n_tokens": len(o.token_ids), "finish_reason": o.finish_reason},
