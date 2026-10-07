@@ -1,0 +1,6 @@
+model,feature,auc_incorrect
+DeepSeek-R1-0528-Qwen3-8B,n_tokens,0.9660633271112525
+DeepSeek-R1-0528-Qwen3-8B,len_chars,0.7783681895418819
+DeepSeek-R1-0528-Qwen3-8B,truncated,0.9599031531720057
+DeepSeek-R1-0528-Qwen3-8B,flip,0.9770260825165108
+DeepSeek-R1-0528-Qwen3-8B,ld_min,0.6219471147509739
