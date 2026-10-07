@@ -1,0 +1,9 @@
+model,problem_id,base_acc,max_drop,worst_type,is_robust
+DeepSeek-R1-0528-Qwen3-8B,057f8a,0.0,0.0,distract,True
+DeepSeek-R1-0528-Qwen3-8B,1acac0,0.5,0.020000000000000018,expert_no_solution,True
+DeepSeek-R1-0528-Qwen3-8B,1fce4b,0.6,0.48,expert_no_solution,False
+DeepSeek-R1-0528-Qwen3-8B,480182,0.0,0.0,expert_no_solution,True
+DeepSeek-R1-0528-Qwen3-8B,71beb6,0.1,0.1,distract,True
+DeepSeek-R1-0528-Qwen3-8B,88c219,0.0,0.0,distract,True
+DeepSeek-R1-0528-Qwen3-8B,a1d40b,0.9,0.8200000000000001,expert_no_solution,False
+DeepSeek-R1-0528-Qwen3-8B,bbd91e,0.9,0.86,expert_no_solution,False
