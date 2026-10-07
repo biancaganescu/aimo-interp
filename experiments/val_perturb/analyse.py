@@ -20,7 +20,7 @@ def iter_run_files(runs, model=None):
     """runs/<model>.jsonl plus split+gzipped parts runs/<model>.partNN.gz (GitHub's 100 MB limit)."""
     stem = model.replace("/", "__") if model else "*"
     stems = [stem] if stem == "*" else [stem, f"{stem}__*"]  # also <model>__<tag> from sample.py --tag
-    return [f for st in stems for pat in (f"{st}.jsonl", f"{st}.part*.gz", f"{st}.part*") for f in sorted(runs.glob(pat))]
+    return [f for st in stems for pat in (f"{st}.jsonl", f"{st}.part*") for f in sorted(runs.glob(pat))]
 
 
 def load_rows(runs, model=None):
@@ -42,6 +42,15 @@ def load_rows(runs, model=None):
 
 def load_runs(runs):
     rows = load_rows(runs)
+    # a `sample.py --continue-truncated --tag T` run holds only the extended traces of <model>; the <model>@T column
+    # is those plus the base model's rows that were not extended (same problems)
+    tagged = {r["model"] for r in rows if r.get("continued_from") is not None}
+    for tm in tagged:
+        base = tm.split("@")[0]
+        have = {(r["id"], r["sample_idx"]) for r in rows if r["model"] == tm}
+        pids = {r["problem_id"] for r in rows if r["model"] == tm}
+        rows += [{**r, "model": tm} for r in rows
+                 if r["model"] == base and r["problem_id"] in pids and (r["id"], r["sample_idx"]) not in have]
     for r in rows:
         # runs written before the byte-level fix in sample.py: re-decode and re-extract the answer
         r["response"] = fix_bytelevel(r.get("response") or "")

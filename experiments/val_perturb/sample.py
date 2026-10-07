@@ -120,6 +120,75 @@ def load_items(args):
     return items
 
 
+def read_base_rows(model):
+    """Rows of the untagged run: runs/<model>.jsonl, else the split .partNN(.gz) pieces; de-duplicated."""
+    import gzip
+    stem = model.replace("/", "__")
+    files = sorted(RUNS.glob(f"{stem}.jsonl")) or sorted(RUNS.glob(f"{stem}.part*"))
+    seen, rows = set(), []
+    for f in files:
+        with (gzip.open if f.suffix == ".gz" else open)(f, "rt") as fh:
+            for line in fh:
+                r = json.loads(line)
+                if (r["id"], r["sample_idx"]) not in seen:
+                    seen.add((r["id"], r["sample_idx"]))
+                    rows.append(r)
+    return rows
+
+
+def continue_truncated(args, items, model):
+    tagged = f"{model}@{args.tag}"
+    out = RUNS / (tagged.replace("/", "__").replace("@", "__") + ".jsonl")
+    ids = {it["id"] for it in items}
+    done = set()
+    if out.exists():
+        for line in out.open():
+            r = json.loads(line)
+            done.add((r["id"], r["sample_idx"]))
+    base = read_base_rows(model)
+    todo = [r for r in base if r["finish_reason"] == "length" and r["id"] in ids and (r["id"], r["sample_idx"]) not in done]
+    longest = max((r["n_tokens"] for r in todo), default=0)
+    print(f"{model}: {len(base)} base samples, {len(todo)} truncated to extend by {args.max_tokens} tokens "
+          f"({len(done)} done); longest prefix {longest} tokens", file=sys.stderr)
+    if args.dry_run or not todo:
+        return
+    from vllm import LLM, SamplingParams
+    max_len = args.max_model_len or (longest + args.max_tokens + 2048)
+    llm = LLM(model=model, tensor_parallel_size=args.tp, gpu_memory_utilization=args.gpu_mem,
+              max_model_len=max_len, trust_remote_code=True, enable_prefix_caching=True,
+              kv_cache_dtype=args.kv_cache_dtype)
+    tok = llm.get_tokenizer()
+    sp = SamplingParams(n=1, temperature=1.0, top_k=40, top_p=0.95, max_tokens=args.max_tokens, seed=0)
+    step = args.batch * args.n  # same number of concurrent sequences as a normal batch
+    with out.open("a") as f:
+        for i in range(0, len(todo), step):
+            chunk = todo[i:i + step]
+            prompts = []
+            for r in chunk:
+                prefix = tok.apply_chat_template(
+                    [{"role": "system", "content": SYSTEM}, {"role": "user", "content": r["question"]}],
+                    tokenize=False, add_generation_prompt=True)
+                partial = fix_bytelevel(r["response"])
+                # the generation prompt of thinking models already ends with "<think>"; don't emit it twice
+                if prefix.rstrip().endswith("<think>") and partial.lstrip().startswith("<think>"):
+                    partial = partial.lstrip()[len("<think>"):]
+                prompts.append(prefix + partial)
+            results = llm.generate(prompts, sp, use_tqdm=True)
+            for r, res in zip(chunk, results):
+                o = res.outputs[0]
+                text = fix_bytelevel(r["response"]) + fix_bytelevel(o.text)
+                reasoning, final = split_reasoning(text)
+                ans = extract_answer(final, text)
+                keep = {k: r[k] for k in ("problem_id", "type", "variant_idx", "question", "source", "flag", "expected", "id")
+                        if k in r}
+                f.write(json.dumps({**keep, "model": tagged, "sample_idx": r["sample_idx"], "response": text,
+                                    "reasoning": reasoning, "final": final, "answer": ans,
+                                    "correct": is_correct(ans, r["expected"]),
+                                    "n_tokens": r["n_tokens"] + len(o.token_ids), "finish_reason": o.finish_reason,
+                                    "continued_from": r["n_tokens"]}, ensure_ascii=False) + "\n")
+            f.flush()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True, choices=MODELS + ["all"])
@@ -138,6 +207,10 @@ def main():
     ap.add_argument("--tag", default=None,
                     help="write to runs/<model>__<tag>.jsonl and record model as <model>@<tag> (e.g. a 64k-cap rerun), "
                          "so it resumes independently and is analysed as a separate column")
+    ap.add_argument("--continue-truncated", action="store_true",
+                    help="instead of sampling afresh, extend every sample of this model that hit the cap "
+                         "(finish_reason=length) by --max-tokens more tokens, feeding prompt + partial trace back as "
+                         "the prefix. Requires --tag; analyse.py shows <model>@<tag> = finished originals + extended traces")
     ap.add_argument("--max-model-len", type=int, default=None)
     ap.add_argument("--tp", type=int, default=1)
     ap.add_argument("--gpu-mem", type=float, default=0.9)
@@ -146,6 +219,12 @@ def main():
     args = ap.parse_args()
 
     items = load_items(args)
+    if args.continue_truncated:
+        if not args.tag:
+            sys.exit("--continue-truncated needs --tag (e.g. --tag 64k)")
+        for model in (MODELS if args.model == "all" else [args.model]):
+            continue_truncated(args, items, model)
+        return
     print(f"{len(items)} prompts x {args.n} samples", file=sys.stderr)
     if args.dry_run:
         print(Counter(it["type"] for it in items))

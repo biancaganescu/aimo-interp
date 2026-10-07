@@ -45,6 +45,19 @@ python experiments/val_perturb/analyse.py          # -> runs/analysis/summary.md
 
 Then commit/push `experiments/val_perturb/runs/` (JSONL, a few hundred MB for all 4 models) or share it any other way.
 
+### Extending truncated traces instead of re-running at a higher cap
+
+At 32k R1-0528-Qwen3-8B hits the cap on ~60% of samples. Rather than resampling everything at 64k (≈4× the cost),
+`--continue-truncated` feeds prompt + partial trace back as the prefix and generates up to `--max-tokens` more for
+every sample with `finish_reason=length`; finished samples are untouched. The result is written to
+`runs/<model>__<tag>.jsonl` and `analyse.py`/`viewer.py` show it as a separate column `<model>@<tag>` (= extended
+traces + the unextended base rows of the same problems), so the 32k and 64k views can be compared directly.
+
+```bash
+python experiments/val_perturb/sample.py --model deepseek-ai/DeepSeek-R1-0528-Qwen3-8B \
+  --continue-truncated --tag 64k --kv-cache-dtype fp8 --batch 16     # max-model-len is set automatically
+```
+
 ## Notes
 
 - `n=10` samples per prompt and 10 variants per type mirrors the `val-sample` setup (`n_base_predictions=10`,
