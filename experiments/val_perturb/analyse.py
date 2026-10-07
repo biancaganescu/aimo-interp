@@ -19,7 +19,8 @@ ROBUST_MAX, NONROBUST_MIN = 0.10, 0.25
 def iter_run_files(runs, model=None):
     """runs/<model>.jsonl plus split+gzipped parts runs/<model>.partNN.gz (GitHub's 100 MB limit)."""
     stem = model.replace("/", "__") if model else "*"
-    return sorted(runs.glob(f"{stem}.jsonl")) + sorted(runs.glob(f"{stem}.part*.gz")) + sorted(runs.glob(f"{stem}.part*"))
+    stems = [stem] if stem == "*" else [stem, f"{stem}__*"]  # also <model>__<tag> from sample.py --tag
+    return [f for st in stems for pat in (f"{st}.jsonl", f"{st}.part*.gz", f"{st}.part*") for f in sorted(runs.glob(pat))]
 
 
 def load_rows(runs, model=None):

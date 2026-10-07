@@ -135,6 +135,9 @@ def main():
     ap.add_argument("--problems", default=None)
     ap.add_argument("--types", default=None)
     ap.add_argument("--max-tokens", type=int, default=32768)
+    ap.add_argument("--tag", default=None,
+                    help="write to runs/<model>__<tag>.jsonl and record model as <model>@<tag> (e.g. a 64k-cap rerun), "
+                         "so it resumes independently and is analysed as a separate column")
     ap.add_argument("--max-model-len", type=int, default=None)
     ap.add_argument("--tp", type=int, default=1)
     ap.add_argument("--gpu-mem", type=float, default=0.9)
@@ -152,7 +155,8 @@ def main():
     models = MODELS if args.model == "all" else [args.model]
     RUNS.mkdir(exist_ok=True)
     for model in models:
-        out = RUNS / (model.replace("/", "__") + ".jsonl")
+        tagged = f"{model}@{args.tag}" if args.tag else model
+        out = RUNS / (tagged.replace("/", "__").replace("@", "__") + ".jsonl")
         done = set()
         if out.exists():
             for line in out.open():
@@ -176,7 +180,7 @@ def main():
                         text = fix_bytelevel(o.text)
                         reasoning, final = split_reasoning(text)
                         ans = extract_answer(final, text)
-                        f.write(json.dumps({**it, "model": model, "sample_idx": k, "response": text,
+                        f.write(json.dumps({**it, "model": tagged, "sample_idx": k, "response": text,
                                             "reasoning": reasoning, "final": final, "answer": ans,
                                             "correct": is_correct(ans, it["expected"]),
                                             "n_tokens": len(o.token_ids), "finish_reason": o.finish_reason},

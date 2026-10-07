@@ -204,7 +204,7 @@ JS = r"""
   }
   function badge(s) {
     const k = s.fin==='length' ? 'len' : (s.ok ? 'ok' : 'wrong');
-    return el('span', {class:'v-badge', 'data-k':k, text: s.fin==='length' ? 'truncated' : (s.ok ? 'correct' : 'wrong')});
+    return el('span', {class:'v-badge', 'data-k':k, text: s.fin==='length' ? 'truncated' : (s.ok ? (String(s.ans).toLowerCase()==='nan' ? 'correct (NaN expected)' : 'correct') : 'wrong')});
   }
   function tracePane(s, needle) {
     const wrap = el('div');
