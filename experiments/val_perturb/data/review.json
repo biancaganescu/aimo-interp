@@ -1,0 +1,174 @@
+{
+ "reviewer": "manual (Devin, no LLM)",
+ "checked": "all 639 generated variants against the original problem and its answer",
+ "statuses": {
+  "drop": "invalid: alters the answer, states a falsehood, or (expert_no_solution) is still solvable",
+  "flag": "kept but questionable; sample.py records flag=true so analyses can exclude them"
+ },
+ "verified_extra": {
+  "480182": "BE=702/49 -> 751 recomputed numerically; E on segment BC; X,Y on same arc of AB"
+ },
+ "items": [
+  {
+   "problem_id": "1acac0",
+   "type": "rename",
+   "variant_idx": 0,
+   "status": "flag",
+   "reason": "point R vs circumradius R clash (organiser-style flaw)"
+  },
+  {
+   "problem_id": "1acac0",
+   "type": "rename",
+   "variant_idx": 6,
+   "status": "flag",
+   "reason": "point R vs circumradius R clash"
+  },
+  {
+   "problem_id": "1acac0",
+   "type": "distract",
+   "variant_idx": 2,
+   "status": "drop",
+   "reason": "\"assume AC,BC integers\": at the optimum CD=50, AC=BC=sqrt(2600) is not an integer; changes the answer"
+  },
+  {
+   "problem_id": "1acac0",
+   "type": "distract",
+   "variant_idx": 9,
+   "status": "drop",
+   "reason": "\"perimeter < 100\": the optimal triangle has perimeter ~122; changes the answer"
+  },
+  {
+   "problem_id": "1acac0",
+   "type": "expert_no_solution",
+   "variant_idx": 5,
+   "status": "flag",
+   "reason": "only R fixed: sup CD = 52 is not attained; unsolvable only on a strict reading"
+  },
+  {
+   "problem_id": "71beb6",
+   "type": "expert_perturbations",
+   "variant_idx": 1,
+   "status": "drop",
+   "reason": "false statement: N = 10^100-2 is -1 (mod 9), not -2"
+  },
+  {
+   "problem_id": "71beb6",
+   "type": "expert_perturbations",
+   "variant_idx": 7,
+   "status": "drop",
+   "reason": "false statement: T = 45*10^101-900 has 103 digits, text claims at most 102"
+  },
+  {
+   "problem_id": "71beb6",
+   "type": "expert_no_solution",
+   "variant_idx": 4,
+   "status": "drop",
+   "reason": "solvable: the largest positive integer less than 10^100-2 is 10^100-3"
+  },
+  {
+   "problem_id": "a1d40b",
+   "type": "distract",
+   "variant_idx": 7,
+   "status": "drop",
+   "reason": "false statement: n^2+(n+1)^2 = 2n^2+2n+1 is always odd, not even"
+  },
+  {
+   "problem_id": "a1d40b",
+   "type": "expert_no_solution",
+   "variant_idx": 0,
+   "status": "drop",
+   "reason": "solvable: \"also a multiple of 5\" counts n=3 (mod 5), still N=2*10^100 and answer 201"
+  },
+  {
+   "problem_id": "a1d40b",
+   "type": "expert_no_solution",
+   "variant_idx": 2,
+   "status": "flag",
+   "reason": "weak: asks two quantities; a model can still answer 201"
+  },
+  {
+   "problem_id": "a1d40b",
+   "type": "expert_no_solution",
+   "variant_idx": 4,
+   "status": "flag",
+   "reason": "weak: N=0 so \"prime factors of 0\" is undefined, but 0 is a natural reply"
+  },
+  {
+   "problem_id": "a1d40b",
+   "type": "expert_no_solution",
+   "variant_idx": 5,
+   "status": "drop",
+   "reason": "weak: \"for n>=0\" only adds an undefined F_{-1}; the natural reading still gives 201"
+  },
+  {
+   "problem_id": "a1d40b",
+   "type": "expert_no_solution",
+   "variant_idx": 8,
+   "status": "flag",
+   "reason": "weak: asks two outputs"
+  },
+  {
+   "problem_id": "057f8a",
+   "type": "expert_no_solution",
+   "variant_idx": 1,
+   "status": "flag",
+   "reason": "weak: varying day within each block gives a different but arguably well-defined min-max gap"
+  },
+  {
+   "problem_id": "057f8a",
+   "type": "expert_no_solution",
+   "variant_idx": 2,
+   "status": "drop",
+   "reason": "solvable: offsets fixed to (0,1,2), so the max gap is computable"
+  },
+  {
+   "problem_id": "057f8a",
+   "type": "expert_no_solution",
+   "variant_idx": 3,
+   "status": "flag",
+   "reason": "weak: \"exactly d\" is contradictory only on a strict reading"
+  },
+  {
+   "problem_id": "057f8a",
+   "type": "expert_no_solution",
+   "variant_idx": 6,
+   "status": "drop",
+   "reason": "solvable: schedules fixed to multiples of 100/120/150, gap computable"
+  },
+  {
+   "problem_id": "057f8a",
+   "type": "expert_no_solution",
+   "variant_idx": 8,
+   "status": "drop",
+   "reason": "solvable: 79 is prime, so the answer is unchanged"
+  },
+  {
+   "problem_id": "057f8a",
+   "type": "expert_no_solution",
+   "variant_idx": 9,
+   "status": "drop",
+   "reason": "solvable: time-of-day remark does not change the day-level answer 79"
+  },
+  {
+   "problem_id": "480182",
+   "type": "rename",
+   "variant_idx": 9,
+   "status": "flag",
+   "reason": "lowercase single-letter labels: \"bc=108, ca=126\" read like products"
+  },
+  {
+   "problem_id": "480182",
+   "type": "domain",
+   "variant_idx": 3,
+   "status": "drop",
+   "reason": "false: E lies beyond Y on line XY (XE/XY = 1.37), so segment XY never meets BC"
+  },
+  {
+   "problem_id": "480182",
+   "type": "domain",
+   "variant_idx": 8,
+   "status": "drop",
+   "reason": "false: same, segment XY does not meet segment BC"
+  }
+ ]
+}
