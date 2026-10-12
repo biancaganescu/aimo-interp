@@ -53,6 +53,12 @@ every sample with `finish_reason=length`; finished samples are untouched. The re
 `runs/<model>__<tag>.jsonl` and `analyse.py`/`viewer.py` show it as a separate column `<model>@<tag>` (= extended
 traces + the unextended base rows of the same problems), so the 32k and 64k views can be compared directly.
 
+Result of the R1 continuation (all 1,245 capped samples extended): 81% of them finish within 64k; overall accuracy
+0.38 → 0.66, truncation 0.60 → 0.11. Accuracy among finished samples falls from 0.92 to 0.74 because the traces that
+needed >32k are mostly the hard problems, where the model finishes but is wrong (057f8a: 2% correct, 88c219: 3%, mostly
+answering 11/6 instead of 810). Surface perturbation drops stay ≤0.03; `expert_no_solution` is still the only large
+drop (NaN rate 0.22).
+
 ```bash
 python experiments/val_perturb/sample.py --model deepseek-ai/DeepSeek-R1-0528-Qwen3-8B \
   --continue-truncated --tag 64k --kv-cache-dtype fp8 --batch 16     # max-model-len is set automatically
